@@ -2,6 +2,7 @@
 MongoDB backed Node Express logger
 
 ## How to use?
+*package.json*
 ```json
 {
   ...
@@ -13,6 +14,7 @@ MongoDB backed Node Express logger
 }
 ```
 
+*app.js*
 ```node
 var express = require('express')
 var momolog = require('momolog')
