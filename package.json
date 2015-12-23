@@ -1,0 +1,33 @@
+{
+  "name": "momolog",
+  "version": "0.1.0",
+  "description": "MongoDB backed Node Express logger.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/toyoshim/momolog.git"
+  },
+  "keywords": [
+    "express",
+    "MongoDB",
+    "morgan",
+    "logger",
+    "logging"
+  ],
+  "author": "Takashi Toyoshima <toyoshim@gmail.com>",
+  "license": "BSD",
+  "bugs": {
+    "url": "https://github.com/toyoshim/momolog/issues"
+  },
+  "homepage": "https://github.com/toyoshim/momolog#readme",
+  "dependencies": {
+    "morgan": "^1.6.1",
+    "mongodb": "^2.0.52"
+  },
+  "engines": {
+    "node": ">=0.12.0"
+  }
+}
