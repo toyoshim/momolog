@@ -2,6 +2,17 @@
 MongoDB backed Node Express logger
 
 ## How to use?
+```json
+{
+  ...
+  "dependencies": {
+    "express": "4.13.3",
+    "momolog": "0.1.0"
+  },
+  ...
+}
+```
+
 ```node
 var express = require('express')
 var momolog = require('momolog')
