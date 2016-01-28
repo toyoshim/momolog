@@ -66,3 +66,4 @@ log.connect(process.env.MONGOLAB_URI, 'log').then(() => {
 ## For other languages
 
 - Rack / Ruby: [ramolog](https://github.com/toyoshim/ramolog)
+- http / Golang: [gomolog](https://github.com/toyoshim/gomolog)
