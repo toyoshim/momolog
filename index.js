@@ -25,66 +25,69 @@
 
 'use strict'
 
-module.exports = momolog
+const mongodb = require('mongodb')
+const onfinished = require('on-finished')
 
-var mongodb = require('mongodb')
-var morgan = require('morgan')
-var stream = require('stream')
-var util = require('util')
+module.exports = {
+  connect: function (url, collection) {
+    return new Promise((resolve, reject) => {
+      mongodb.MongoClient.connect(url, (err, db) => {
+        if (err)
+          return reject(err);
 
-morgan.format('momolog', [
-    '{"format": 1, "date": ":date[iso]", "referrer": ":referrer"',
-    ', "request": {"method": ":method", "host": ":req[host]", "url": ":url"',
-        ', "protocol": "HTTP/:http-version"',
-        ', "acceptLanguage": ":req[accept-language]"}',
-    ', "response": {"status": :status, "contentLength": ":res[content-length]"',
-    ', "responseTime": :response-time}',
-    ', "remote": {"addr": ":remote-addr", "user": ":remote-user"',
-    ', "userAgent": ":user-agent"}}'].join(''));
+        const c = db.collection(collection);
 
-function momolog() {
-  return new MongoDBStream();
-}
+        resolve((req, res, next) => {
+          // Records the start time.
+          const date = new Date().toISOString();
+          const start = process.hrtime();
 
-// MongoDBStream for logging.
-function MongoDBStream() {
-  stream.Writable.call(this);
-  this._db = null;
-  this._collection = null;
-  this._morgan = morgan('momolog', {stream: this});
-}
+          // Runs logging after finishing the actual handler finished.
+          onfinished(res, () => {
+            // Calculates duration time in msec.
+            const duration = process.hrtime(start);
+            const ms = duration[0] * 1e3 + duration[1] * 1e-6;
 
-util.inherits(MongoDBStream, stream.Writable);
+            // Finds a right remote host IP address. If there is proxies in the
+            // middle, the original host IP should appear in the last place of
+            // the x-forwarded-for header.
+            let raddr = req.ip ||
+                        req._remoteAddress ||
+                        (req.connection && req.connection.remoteAddress);
+            if (req.headers['x-forwarded-for']) {
+              const forwarded = req.headers['x-forwarded-for'].split(',');
+              raddr = forwarded[forwarded.length - 1];
+            }
 
-MongoDBStream.prototype._write = function(chunk, encoding, callback) {
-  var log = JSON.parse(chunk);
-  log.response.contentLength = Number(log.response.contentLength) || -1;
+            // Writes to MongoDB.
+            c.insertOne({
+              format: 2,
+              date: date,
+              referrer: req.headers['referer'] || req.headers['referrer'] || "",
+              request: {
+                method: req.method,
+                host: req.hostname,
+                url: req.originalUrl || req.url,
+                protocol: 'HTTP/' + req.httpVersionMajor + '.' +
+                    req.httpVersionMinor,
+                acceptLanguage: req.headers['accept-language']
+              },
+              response: {
+                status: res._header ? res.statusCode : undefined,
+                contentLength: res._headers['content-length'] || -1,
+                responseTime: ms
+              },
+              remote: {
+                addr: raddr,
+                user: '-',
+                userAgent: req.headers['user-agent']
+              }
+            });
+          }); // onfinished
 
-  var cb = callback || function(e) { e && console.log(e); };
-  if (this._collection) {
-    this._collection.insertOne(log).then(() => {
-      cb(null);
-    }, (e, db) => {
-      cb(e);
+          next();
+        }); // resolve
+      });
     });
-  } else {
-    console.log(JSON.stringify(log));
-    cb(null);
-  }
-};
-
-MongoDBStream.prototype.connect = function(url, collection) {
-  return new Promise((resolve, reject) => {
-    mongodb.MongoClient.connect(url, (err, db) => {
-      if (err)
-        return reject(err);
-      this._db = db;
-      this._collection = db.collection(collection);
-      resolve();
-    });
-  });
-};
-
-MongoDBStream.prototype.morgan = function() {
-  return this._morgan;
-};
+  }  // connect:
+}  // module.exports

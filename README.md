@@ -8,7 +8,7 @@ MongoDB backed Node Express logger
   ...
   "dependencies": {
     "express": "4.13.3",
-    "momolog": "0.1.0"
+    "momolog": "0.1.1"
   },
   ...
 }
@@ -20,11 +20,11 @@ var express = require('express')
 var momolog = require('momolog')
 
 var app = express();
-var log = momolog();
-// Call connect() with MongoDB URI and collection name.
-log.connect(process.env.MONGOLAB_URI, 'log').then(() => {
-  // Connected.
-  app.use(log.morgan());  // Install as a logger
+
+// Connect to the MongoDB with URI and collection name.
+momolog.connect(process.env.MONGOLAB_URI, 'log').then(logger => {
+  // Register the logger.
+  app.use(logger);
 
   // Other configurations.
 
@@ -40,7 +40,7 @@ log.connect(process.env.MONGOLAB_URI, 'log').then(() => {
     "_id": {
         "$oid": "567a4cceeeba20030010b8a8"
     },
-    "format": 1,
+    "format": 2,
     "date": "2015-12-23T07:27:10.260Z",
     "referrer": "http://jsrun.it/toyoshim/miIs",
     "request": {
@@ -62,6 +62,8 @@ log.connect(process.env.MONGOLAB_URI, 'log').then(() => {
     }
 }
 ```
+
+The format should not be changed from the version 1, but updated to 2 just in case.
 
 ## For other languages
 
