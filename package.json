@@ -23,10 +23,10 @@
   },
   "homepage": "https://github.com/toyoshim/momolog",
   "dependencies": {
-    "mongodb": "~2.0.52",
-    "on-finished": "~2.3.0"
+    "mongodb": "^6.21.0",
+    "on-finished": "^2.4.1"
   },
   "engines": {
-    "node": ">=0.12.0"
+    "node": ">=16.20.1"
   }
 }

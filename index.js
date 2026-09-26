@@ -30,64 +30,59 @@ const onfinished = require('on-finished')
 
 module.exports = {
   connect: function (url, collection) {
-    return new Promise((resolve, reject) => {
-      mongodb.MongoClient.connect(url, (err, db) => {
-        if (err)
-          return reject(err);
+    return mongodb.MongoClient.connect(url).then(client => {
+      const c = client.db().collection(collection);
 
-        const c = db.collection(collection);
+      return (req, res, next) => {
+        // Records the start time.
+        const date = new Date().toISOString();
+        const start = process.hrtime();
 
-        resolve((req, res, next) => {
-          // Records the start time.
-          const date = new Date().toISOString();
-          const start = process.hrtime();
+        // Runs logging after finishing the actual handler finished.
+        onfinished(res, () => {
+          // Calculates duration time in msec.
+          const duration = process.hrtime(start);
+          const ms = duration[0] * 1e3 + duration[1] * 1e-6;
 
-          // Runs logging after finishing the actual handler finished.
-          onfinished(res, () => {
-            // Calculates duration time in msec.
-            const duration = process.hrtime(start);
-            const ms = duration[0] * 1e3 + duration[1] * 1e-6;
+          // Finds a right remote host IP address. If there is proxies in the
+          // middle, the original host IP should appear in the last place of
+          // the x-forwarded-for header.
+          let raddr = req.ip ||
+                      req._remoteAddress ||
+                      (req.connection && req.connection.remoteAddress);
+          if (req.headers['x-forwarded-for']) {
+            const forwarded = req.headers['x-forwarded-for'].split(',');
+            raddr = forwarded[forwarded.length - 1];
+          }
 
-            // Finds a right remote host IP address. If there is proxies in the
-            // middle, the original host IP should appear in the last place of
-            // the x-forwarded-for header.
-            let raddr = req.ip ||
-                        req._remoteAddress ||
-                        (req.connection && req.connection.remoteAddress);
-            if (req.headers['x-forwarded-for']) {
-              const forwarded = req.headers['x-forwarded-for'].split(',');
-              raddr = forwarded[forwarded.length - 1];
+          // Writes to MongoDB.
+          c.insertOne({
+            format: 2,
+            date: date,
+            referrer: req.headers['referer'] || req.headers['referrer'] || "",
+            request: {
+              method: req.method,
+              host: req.hostname,
+              url: req.originalUrl || req.url,
+              protocol: 'HTTP/' + req.httpVersionMajor + '.' +
+                  req.httpVersionMinor,
+              acceptLanguage: req.headers['accept-language']
+            },
+            response: {
+              status: res._header ? res.statusCode : undefined,
+              contentLength: res._headers['content-length'] || -1,
+              responseTime: ms
+            },
+            remote: {
+              addr: raddr,
+              user: '-',
+              userAgent: req.headers['user-agent']
             }
+          });
+        }); // onfinished
 
-            // Writes to MongoDB.
-            c.insertOne({
-              format: 2,
-              date: date,
-              referrer: req.headers['referer'] || req.headers['referrer'] || "",
-              request: {
-                method: req.method,
-                host: req.hostname,
-                url: req.originalUrl || req.url,
-                protocol: 'HTTP/' + req.httpVersionMajor + '.' +
-                    req.httpVersionMinor,
-                acceptLanguage: req.headers['accept-language']
-              },
-              response: {
-                status: res._header ? res.statusCode : undefined,
-                contentLength: res._headers['content-length'] || -1,
-                responseTime: ms
-              },
-              remote: {
-                addr: raddr,
-                user: '-',
-                userAgent: req.headers['user-agent']
-              }
-            });
-          }); // onfinished
-
-          next();
-        }); // resolve
-      });
+        next();
+      };
     });
   }  // connect:
 }  // module.exports
