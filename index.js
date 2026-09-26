@@ -69,8 +69,8 @@ module.exports = {
               acceptLanguage: req.headers['accept-language']
             },
             response: {
-              status: res._header ? res.statusCode : undefined,
-              contentLength: res._headers['content-length'] || -1,
+              status: res.headersSent ? res.statusCode : undefined,
+              contentLength: res.getHeader('content-length') ?? -1,
               responseTime: ms
             },
             remote: {
@@ -78,6 +78,8 @@ module.exports = {
               user: '-',
               userAgent: req.headers['user-agent']
             }
+          }).catch(err => {
+            console.error('Failed to write request log to MongoDB:', err);
           });
         }); // onfinished
 
